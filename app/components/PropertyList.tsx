@@ -39,7 +39,7 @@ const PropertyList = () => {
 
   const [debouncedFilters, setDebouncedFilters] = useState<Filters>(filters);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
   // Debounce filters to avoid too many API calls
   useEffect(() => {

@@ -36,7 +36,7 @@ const MyBookingsPage = () => {
     }
   }, [user, authLoading, router]);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
   const { data: bookings, isLoading, error } = useQuery({
     queryKey: ['my-bookings'],

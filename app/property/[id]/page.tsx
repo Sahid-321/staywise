@@ -31,7 +31,7 @@ const PropertyDetailPage = () => {
   const { user } = useAuth();
   const propertyId = params.id as string;
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
   const { data: property, isLoading, error } = useQuery({
     queryKey: ['property', propertyId],

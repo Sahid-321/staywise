@@ -28,7 +28,7 @@ const BookingForm = ({ property }: BookingFormProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
   const createBookingMutation = useMutation({
     mutationFn: async (bookingData: any) => {
