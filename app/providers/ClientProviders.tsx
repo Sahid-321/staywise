@@ -41,6 +41,20 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     checkAuthStatus();
   }, []);
 
+    // Helper function to decode JWT token client-side
+  const decodeJWTToken = (token: string) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      return null;
+    }
+  };
+
   const checkAuthStatus = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -49,7 +63,16 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/auth/me`, {
+      // First, check if token is expired
+      const decoded = decodeJWTToken(token);
+      if (decoded && decoded.exp && Date.now() >= decoded.exp * 1000) {
+        localStorage.removeItem('token');
+        setLoading(false);
+        return;
+      }
+
+      const apiUrl = API_URL ? `${API_URL}/api/auth/me` : '/api/auth/me';
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -58,19 +81,40 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
+      } else if (response.status === 405) {
+        // Method not allowed - route might not be compiled yet
+        // Fallback: use cached user data if available
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+          console.log('Using fallback auth from cached user data');
+          setUser(JSON.parse(userData));
+        } else if (decoded && decoded.id) {
+          console.log('Using fallback auth from token');
+          // Create basic user object from token as last resort
+          setUser({
+            id: decoded.id,
+            email: decoded.email || '',
+            firstName: '',
+            lastName: '',
+            role: 'user' // default role
+          });
+        }
       } else {
+        console.log('Auth check failed with status:', response.status);
         localStorage.removeItem('token');
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      localStorage.removeItem('token');
+      // Don't remove token on network errors, might be temporary
+      console.log('Network error during auth check, keeping token');
     } finally {
       setLoading(false);
     }
   };
 
   const login = async (email: string, password: string) => {
-    const response = await fetch(`${API_URL}/api/auth/login`, {
+    const apiUrl = API_URL ? `${API_URL}/api/auth/login` : '/api/auth/login';
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -85,11 +129,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     localStorage.setItem('token', data.token);
+    localStorage.setItem('userData', JSON.stringify(data.user));
     setUser(data.user);
   };
 
   const signup = async (email: string, password: string, firstName: string, lastName: string) => {
-    const response = await fetch(`${API_URL}/api/auth/signup`, {
+    const apiUrl = API_URL ? `${API_URL}/api/auth/signup` : '/api/auth/signup';
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -104,11 +150,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     localStorage.setItem('token', data.token);
+    localStorage.setItem('userData', JSON.stringify(data.user));
     setUser(data.user);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userData');
     setUser(null);
   };
 

@@ -38,11 +38,12 @@ const MyBookingsPage = () => {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-  const { data: bookings, isLoading, error } = useQuery({
+  const { data: bookingsData, isLoading, error } = useQuery({
     queryKey: ['my-bookings'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/bookings/my-bookings`, {
+      const apiUrl = API_URL ? `${API_URL}/api/bookings` : '/api/bookings';
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -52,19 +53,25 @@ const MyBookingsPage = () => {
         throw new Error('Failed to fetch bookings');
       }
       
-      return response.json();
+      const data = await response.json();
+      return data.bookings || []; // Extract bookings array from response
     },
     enabled: !!user,
   });
 
+  const bookings = bookingsData || [];
+
   const cancelBookingMutation = useMutation({
     mutationFn: async (bookingId: string) => {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/bookings/${bookingId}/cancel`, {
-        method: 'PUT',
+      const apiUrl = API_URL ? `${API_URL}/api/bookings/${bookingId}` : `/api/bookings/${bookingId}`;
+      const response = await fetch(apiUrl, {
+        method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'cancelled' })
       });
 
       if (!response.ok) {

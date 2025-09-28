@@ -56,7 +56,8 @@ const PropertyList = () => {
       if (value) params.append(key, value);
     });
 
-    const response = await fetch(`${API_URL}/api/properties?${params}`);
+    const apiUrl = API_URL ? `${API_URL}/api/properties?${params}` : `/api/properties?${params}`;
+    const response = await fetch(apiUrl);
     if (!response.ok) {
       throw new Error('Failed to fetch properties');
     }

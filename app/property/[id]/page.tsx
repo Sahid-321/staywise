@@ -20,9 +20,9 @@ interface Property {
   bathrooms: number;
   propertyType: 'villa' | 'hotel' | 'apartment' | 'house';
   isAvailable: boolean;
-  owner: {
-    firstName: string;
-    lastName: string;
+  owner?: {
+    firstName?: string;
+    lastName?: string;
   };
 }
 
@@ -33,16 +33,20 @@ const PropertyDetailPage = () => {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-  const { data: property, isLoading, error } = useQuery({
+  const { data: propertyData, isLoading, error } = useQuery({
     queryKey: ['property', propertyId],
     queryFn: async () => {
-      const response = await fetch(`${API_URL}/api/properties/${propertyId}`);
+      const apiUrl = API_URL ? `${API_URL}/api/properties/${propertyId}` : `/api/properties/${propertyId}`;
+      const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error('Failed to fetch property');
       }
-      return response.json();
+      const data = await response.json();
+      return data.property; // Extract the property from the response
     },
   });
+
+  const property = propertyData;
 
   if (isLoading) {
     return (
@@ -151,7 +155,10 @@ const PropertyDetailPage = () => {
           <div className="bg-gray-50 p-6 rounded-lg">
             <h3 className="text-xl font-semibold mb-3">Hosted by</h3>
             <p className="text-gray-700">
-              {property.owner.firstName} {property.owner.lastName}
+              {property.owner?.firstName && property.owner?.lastName 
+                ? `${property.owner.firstName} ${property.owner.lastName}`
+                : 'Host information not available'
+              }
             </p>
           </div>
         </div>

@@ -50,7 +50,8 @@ const AdminPage = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       const params = selectedStatus ? `?status=${selectedStatus}` : '';
-      const response = await fetch(`${API_URL}/api/bookings/all${params}`, {
+      const apiUrl = API_URL ? `${API_URL}/api/bookings${params}` : `/api/bookings${params}`;
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -68,8 +69,9 @@ const AdminPage = () => {
   const updateBookingStatusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: string; status: string }) => {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/bookings/${bookingId}/status`, {
-        method: 'PUT',
+      const apiUrl = API_URL ? `${API_URL}/api/bookings/${bookingId}` : `/api/bookings/${bookingId}`;
+      const response = await fetch(apiUrl, {
+        method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

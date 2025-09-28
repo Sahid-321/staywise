@@ -33,7 +33,8 @@ const BookingForm = ({ property }: BookingFormProps) => {
   const createBookingMutation = useMutation({
     mutationFn: async (bookingData: any) => {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/bookings`, {
+      const apiUrl = API_URL ? `${API_URL}/api/bookings` : '/api/bookings';
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
