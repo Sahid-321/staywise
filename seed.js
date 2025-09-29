@@ -22,7 +22,7 @@ const seedData = async () => {
 
     // Create admin user
     const adminUser = new User({
-      email: 'admin@staywise.com',
+      email: 'admin@gmail.com',
       password: 'admin123',
       firstName: 'Admin',
       lastName: 'User',
@@ -32,7 +32,7 @@ const seedData = async () => {
 
     // Create regular users
     const user1 = new User({
-      email: 'john@example.com',
+      email: 'john@gmail.com',
       password: 'user123',
       firstName: 'John',
       lastName: 'Doe',
@@ -41,7 +41,7 @@ const seedData = async () => {
     await user1.save();
 
     const user2 = new User({
-      email: 'jane@example.com',
+      email: 'jane@gmail.com',
       password: 'user123',
       firstName: 'Jane',
       lastName: 'Smith',
@@ -180,9 +180,9 @@ const seedData = async () => {
     console.log('📅 Sample bookings created');
     console.log('\n🎉 Sample data seeded successfully!');
     console.log('\n📝 Login credentials:');
-    console.log('Admin: admin@staywise.com / admin123');
-    console.log('User 1: john@example.com / user123');
-    console.log('User 2: jane@example.com / user123');
+    console.log('Admin: admin@gmail.com / admin123');
+    console.log('User 1: john@gmail.com / user123');
+    console.log('User 2: jane@gmail.com / user123');
     console.log('\n📊 Admin Panel: Login as admin and visit /admin to manage all bookings!');
 
   } catch (error) {

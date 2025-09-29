@@ -96,7 +96,11 @@ const PropertyList = () => {
 
   return (
     <div>
-      <PropertyFilters onFiltersChange={handleFiltersChange} initialFilters={filters} />
+      <PropertyFilters 
+        onFiltersChange={handleFiltersChange} 
+        initialFilters={filters} 
+        properties={data?.properties || []}
+      />
       
       {isLoading && hasActiveFilters && (
         <div className="text-center py-4">

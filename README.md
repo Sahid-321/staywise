@@ -76,9 +76,9 @@ Use these accounts to test different features:
 
 | Role | Email | Password | Access |
 |------|-------|----------|---------|
-| Admin | admin@staywise.com | admin123 | Can approve bookings, see all users |
-| User | john@example.com | user123 | Can book properties |
-| User | jane@example.com | user123 | Can book properties |
+| Admin | admin@gmail.com | admin123 | Can approve bookings, see all users |
+| User | john@gmail.com | user123 | Can book properties |
+| User | jane@gmail.com | user123 | Can book properties |
 
 ## How to Use
 
@@ -132,14 +132,20 @@ All API routes are built with Next.js API Routes:
 - **🏠 Property Management:** Browse, filter, and view detailed property information  
 - **📅 Booking System:** Date validation, availability checking, and booking management
 - **👨‍💼 Admin Panel:** Approve/reject bookings, manage all properties and users
-- **📱 Responsive Design:** Mobile-friendly UI with Tailwind CSS
+- **� Smart Price Filtering:** Price filters automatically adjust to available property price ranges
+- **🔄 Auto-Refresh:** My Bookings page automatically refreshes when navigated to
+- **👤 User-Specific Views:** My Bookings shows only personal bookings, Admin Panel shows all bookings
+- **�📱 Responsive Design:** Mobile-friendly UI with Tailwind CSS
 - **⚡ Performance:** Built with Next.js 15, optimized for production
 - **🚀 Serverless Ready:** Deploy seamlessly on Vercel with zero configuration
 
 ## Notes
 
-- Images use Picsum Photos for placeholder content
+- Images use professional Unsplash photos for property listings
 - Database is hosted on MongoDB Atlas (cloud)
-- All passwords are securely hashed with bcrypt
+- All passwords are securely hashed with bcrypt (no double-hashing issues)
 - JWT tokens expire after 7 days for security
+- Price filters dynamically adjust to available property price ranges ($180-$450)
+- My Bookings page auto-refreshes for latest data
+- Admin and user bookings are properly separated for privacy
 - Built with modern React patterns and TypeScript for type safety

@@ -13,9 +13,10 @@ interface Filters {
 interface PropertyFiltersProps {
   onFiltersChange: (filters: Filters) => void;
   initialFilters?: Filters;
+  properties?: any[]; // Add properties prop to get price range
 }
 
-const PropertyFilters = ({ onFiltersChange, initialFilters }: PropertyFiltersProps) => {
+const PropertyFilters = ({ onFiltersChange, initialFilters, properties = [] }: PropertyFiltersProps) => {
   const [filters, setFilters] = useState<Filters>(initialFilters || {
     location: '',
     propertyType: '',
@@ -49,11 +50,12 @@ const PropertyFilters = ({ onFiltersChange, initialFilters }: PropertyFiltersPro
   }, [filters, onFiltersChange, isInitialRender]);
 
   const handleFilterChange = useCallback((key: keyof Filters, value: string) => {
-    // Prevent negative values for price fields
+    // Only prevent negative values for price fields
     if ((key === 'minPrice' || key === 'maxPrice') && value !== '') {
       const numValue = parseFloat(value);
       if (numValue < 0) return; // Don't allow negative values
     }
+    
     setFilters(prev => ({ ...prev, [key]: value }));
   }, []);
 
