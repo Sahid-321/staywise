@@ -22,11 +22,13 @@ export async function POST(request: NextRequest) {
     // Your existing login logic
     const { default: User } = await import('@/models/User');
     const user = await User.findOne({ email });
+    
     if (!user) {
       return NextResponse.json({ message: 'Invalid email or password' }, { status: 400 });
     }
 
     const isMatch = await user.comparePassword(password);
+    
     if (!isMatch) {
       return NextResponse.json({ message: 'Invalid email or password' }, { status: 400 });
     }

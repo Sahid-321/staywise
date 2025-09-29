@@ -49,18 +49,26 @@ const PropertyFilters = ({ onFiltersChange, initialFilters }: PropertyFiltersPro
   }, [filters, onFiltersChange, isInitialRender]);
 
   const handleFilterChange = useCallback((key: keyof Filters, value: string) => {
+    // Prevent negative values for price fields
+    if ((key === 'minPrice' || key === 'maxPrice') && value !== '') {
+      const numValue = parseFloat(value);
+      if (numValue < 0) return; // Don't allow negative values
+    }
     setFilters(prev => ({ ...prev, [key]: value }));
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFilters({
+    const clearedFilters = {
       location: '',
       propertyType: '',
       minPrice: '',
       maxPrice: '',
       guests: ''
-    });
-  }, []);
+    };
+    setFilters(clearedFilters);
+    // Immediately notify parent of cleared state
+    onFiltersChange(clearedFilters);
+  }, [onFiltersChange]);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md mb-8">
@@ -101,6 +109,8 @@ const PropertyFilters = ({ onFiltersChange, initialFilters }: PropertyFiltersPro
           </label>
           <input
             type="number"
+            min="0"
+            step="1"
             placeholder="Min $"
             value={filters.minPrice}
             onChange={(e) => handleFilterChange('minPrice', e.target.value)}
@@ -114,6 +124,8 @@ const PropertyFilters = ({ onFiltersChange, initialFilters }: PropertyFiltersPro
           </label>
           <input
             type="number"
+            min="0"
+            step="1"
             placeholder="Max $"
             value={filters.maxPrice}
             onChange={(e) => handleFilterChange('maxPrice', e.target.value)}

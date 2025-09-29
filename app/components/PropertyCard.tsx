@@ -36,8 +36,8 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
 
   return (
     <Link href={`/property/${property._id}`}>
-      <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer">
-        <div className="relative h-48">
+      <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer h-full flex flex-col">
+        <div className="relative h-48 flex-shrink-0">
           {property.images && property.images.length > 0 ? (
             <Image
               src={property.images[0]}
@@ -66,44 +66,46 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           </div>
         </div>
         
-        <div className="p-4">
-          <h3 className="font-semibold text-lg text-gray-900 mb-2 truncate">
+        <div className="p-4 flex-1 flex flex-col">
+          <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-1">
             {property.title}
           </h3>
           
-          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+          <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-1">
             {property.description}
           </p>
           
-          <div className="flex items-center text-sm text-gray-500 mb-3">
-            <span className="mr-4">📍 {property.location}</span>
-          </div>
-          
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <div className="flex items-center space-x-4">
-              <span>👥 {property.maxGuests} guests</span>
-              <span>🛏️ {property.bedrooms} bed</span>
-              <span>🚿 {property.bathrooms} bath</span>
+          <div className="mt-auto">
+            <div className="flex items-center text-sm text-gray-500 mb-3">
+              <span className="truncate">📍 {property.location}</span>
             </div>
-          </div>
-          
-          {property.amenities && property.amenities.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1">
-              {property.amenities.slice(0, 3).map((amenity, index) => (
-                <span 
-                  key={index} 
-                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
-                >
-                  {amenity}
-                </span>
-              ))}
-              {property.amenities.length > 3 && (
-                <span className="text-gray-500 text-xs">
-                  +{property.amenities.length - 3} more
-                </span>
-              )}
+            
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
+              <div className="flex items-center space-x-2 text-xs">
+                <span>👥 {property.maxGuests}</span>
+                <span>🛏️ {property.bedrooms}</span>
+                <span>🚿 {property.bathrooms}</span>
+              </div>
             </div>
-          )}
+            
+            {property.amenities && property.amenities.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {property.amenities.slice(0, 2).map((amenity, index) => (
+                  <span 
+                    key={index} 
+                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
+                  >
+                    {amenity}
+                  </span>
+                ))}
+                {property.amenities.length > 2 && (
+                  <span className="text-gray-500 text-xs">
+                    +{property.amenities.length - 2}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </Link>

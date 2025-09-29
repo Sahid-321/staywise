@@ -35,15 +35,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const statusFilter = searchParams.get('status');
+
+    let query: any = {};
+    
+    // Add status filter if provided
+    if (statusFilter) {
+      query.status = statusFilter;
+    }
+    
     let bookings;
     
     if (user.role === 'admin') {
-      bookings = await Booking.find()
+      bookings = await Booking.find(query)
         .populate('property')
         .populate('user', 'firstName lastName email')
         .sort({ createdAt: -1 });
     } else {
-      bookings = await Booking.find({ user: user._id })
+      // For regular users, add user filter
+      query.user = user._id;
+      bookings = await Booking.find(query)
         .populate('property')
         .sort({ createdAt: -1 });
     }

@@ -32,9 +32,13 @@ const LoginPage = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // Remove spaces from password field
+    const processedValue = name === 'password' ? value.replace(/\s/g, '') : value;
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: processedValue
     });
   };
 

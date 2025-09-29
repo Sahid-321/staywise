@@ -76,7 +76,7 @@ const PropertyList = () => {
   // Don't show loading for initial load with no filters
   const hasActiveFilters = Object.values(filters).some(value => value !== '');
   
-  if (isLoading && !data && hasActiveFilters) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>

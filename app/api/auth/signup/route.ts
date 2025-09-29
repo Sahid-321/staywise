@@ -38,16 +38,12 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Hash password
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // Create new user
+    // Create new user (password will be automatically hashed by User model pre-save hook)
     const user = new User({
       firstName,
       lastName,
       email,
-      password: hashedPassword,
+      password, // Don't hash here - let the User model handle it
       role: 'user'
     });
 

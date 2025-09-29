@@ -38,7 +38,7 @@ const MyBookingsPage = () => {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-  const { data: bookingsData, isLoading, error } = useQuery({
+  const { data: bookingsData, isLoading, error, refetch } = useQuery({
     queryKey: ['my-bookings'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
@@ -57,7 +57,17 @@ const MyBookingsPage = () => {
       return data.bookings || []; // Extract bookings array from response
     },
     enabled: !!user,
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch when component mounts
+    staleTime: 0, // Consider data immediately stale
   });
+
+  // Refresh bookings when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      refetch();
+    }
+  }, [user, refetch]);
 
   const bookings = bookingsData || [];
 
@@ -149,7 +159,17 @@ const MyBookingsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">My Bookings</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
+        <button
+          onClick={() => refetch()}
+          disabled={isLoading}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+        >
+          <span>🔄</span>
+          <span>{isLoading ? 'Refreshing...' : 'Refresh'}</span>
+        </button>
+      </div>
       
       {!bookings || bookings.length === 0 ? (
         <div className="text-center py-12">

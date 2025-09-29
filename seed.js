@@ -59,8 +59,8 @@ const seedData = async () => {
         price: 450,
         location: 'Malibu, California',
         images: [
-          'https://picsum.photos/800/600?random=1',
-          'https://picsum.photos/800/600?random=2'
+          'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800&h=600&fit=crop'
         ],
         amenities: ['Private Beach', 'Infinity Pool', 'Ocean View', 'Gourmet Kitchen', 'WiFi', 'Parking'],
         maxGuests: 8,
@@ -75,8 +75,8 @@ const seedData = async () => {
         price: 180,
         location: 'Downtown Los Angeles, California',
         images: [
-          'https://picsum.photos/800/600?random=3',
-          'https://picsum.photos/800/600?random=4'
+          'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop'
         ],
         amenities: ['City View', 'Gym Access', 'WiFi', 'Kitchen', 'Parking'],
         maxGuests: 4,
@@ -91,8 +91,8 @@ const seedData = async () => {
         price: 320,
         location: 'Aspen, Colorado',
         images: [
-          'https://picsum.photos/800/600?random=5',
-          'https://picsum.photos/800/600?random=6'
+          'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800&h=600&fit=crop'
         ],
         amenities: ['Mountain View', 'Fireplace', 'Ski Access', 'WiFi', 'Kitchen'],
         maxGuests: 6,
@@ -107,8 +107,8 @@ const seedData = async () => {
         price: 280,
         location: 'SoHo, New York',
         images: [
-          'https://picsum.photos/800/600?random=7',
-          'https://picsum.photos/800/600?random=8'
+          'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&h=600&fit=crop'
         ],
         amenities: ['Concierge', 'Spa Access', 'Room Service', 'WiFi', 'Mini Bar'],
         maxGuests: 2,

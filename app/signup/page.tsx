@@ -47,9 +47,13 @@ const SignupPage = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // Remove spaces from password fields
+    const processedValue = (name === 'password' || name === 'confirmPassword') ? value.replace(/\s/g, '') : value;
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: processedValue
     });
   };
 

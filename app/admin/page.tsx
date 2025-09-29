@@ -32,25 +32,23 @@ interface Booking {
 }
 
 const AdminPage = () => {
-  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/');
+      router.push('/login');
     }
   }, [user, authLoading, router]);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
   const { data: bookingsData, isLoading, error } = useQuery({
-    queryKey: ['admin-bookings', selectedStatus],
+    queryKey: ['admin-bookings'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const params = selectedStatus ? `?status=${selectedStatus}` : '';
-      const apiUrl = API_URL ? `${API_URL}/api/bookings${params}` : `/api/bookings${params}`;
+      const apiUrl = API_URL ? `${API_URL}/api/bookings` : `/api/bookings`;
       const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -158,32 +156,18 @@ const AdminPage = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Admin Panel - All Bookings</h1>
-        
-        <div className="flex items-center space-x-4">
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="grid grid-cols-8 gap-4 p-4 bg-gray-50 font-semibold text-sm text-gray-600 border-b">
-          <div>Guest</div>
-          <div>Property</div>
-          <div>Check-in</div>
-          <div>Check-out</div>
-          <div>Guests</div>
-          <div>Total</div>
-          <div>Status</div>
-          <div>Actions</div>
+          <div className="min-w-0">Guest</div>
+          <div className="min-w-0">Property</div>
+          <div className="min-w-0">Check-in</div>
+          <div className="min-w-0">Check-out</div>
+          <div className="min-w-0">Guests</div>
+          <div className="min-w-0">Total</div>
+          <div className="min-w-0">Status</div>
+          <div className="min-w-0">Actions</div>
         </div>
 
         {bookings.length === 0 ? (
@@ -196,16 +180,20 @@ const AdminPage = () => {
           <div className="divide-y divide-gray-200">
             {bookings.map((booking: Booking) => (
               <div key={booking._id} className="grid grid-cols-8 gap-4 p-4 items-center hover:bg-gray-50">
-                <div>
-                  <div className="font-semibold text-sm">
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm truncate">
                     {booking.user.firstName} {booking.user.lastName}
                   </div>
-                  <div className="text-xs text-gray-500">{booking.user.email}</div>
+                  <div className="text-xs text-gray-500 truncate" title={booking.user.email}>
+                    {booking.user.email}
+                  </div>
                 </div>
                 
-                <div>
-                  <div className="font-semibold text-sm">{booking.property.title}</div>
-                  <div className="text-xs text-gray-500">📍 {booking.property.location}</div>
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm truncate" title={booking.property.title}>
+                    {booking.property.title}
+                  </div>
+                  <div className="text-xs text-gray-500 truncate">📍 {booking.property.location}</div>
                 </div>
                 
                 <div className="text-sm">{formatDate(booking.checkIn)}</div>

@@ -39,21 +39,38 @@ export async function PATCH(
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
-    if (user.role !== 'admin') {
-      return NextResponse.json({ message: 'Access denied. Admin rights required.' }, { status: 403 });
+    const booking = await Booking.findById(params.id);
+    if (!booking) {
+      return NextResponse.json({ message: 'Booking not found' }, { status: 404 });
     }
 
     const { status } = await request.json();
     
-    if (!status || !['pending', 'confirmed', 'cancelled'].includes(status)) {
-      return NextResponse.json({ 
-        message: 'Invalid status. Must be pending, confirmed, or cancelled' 
-      }, { status: 400 });
-    }
-
-    const booking = await Booking.findById(params.id);
-    if (!booking) {
-      return NextResponse.json({ message: 'Booking not found' }, { status: 404 });
+    // Check if user can perform this action
+    if (user.role === 'admin') {
+      // Admin can change status to any valid status
+      if (!status || !['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
+        return NextResponse.json({ 
+          message: 'Invalid status. Must be pending, confirmed, cancelled, or completed' 
+        }, { status: 400 });
+      }
+    } else {
+      // Regular users can only cancel their own bookings
+      if (booking.user.toString() !== user._id.toString()) {
+        return NextResponse.json({ message: 'Access denied. You can only cancel your own bookings.' }, { status: 403 });
+      }
+      
+      if (status !== 'cancelled') {
+        return NextResponse.json({ 
+          message: 'You can only cancel bookings' 
+        }, { status: 400 });
+      }
+      
+      if (booking.status === 'completed' || booking.status === 'cancelled') {
+        return NextResponse.json({ 
+          message: 'Cannot cancel a booking that is already completed or cancelled' 
+        }, { status: 400 });
+      }
     }
 
     booking.status = status;
