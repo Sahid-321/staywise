@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     // Get query parameters
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status');
+    const adminView = searchParams.get('admin'); // Check if this is admin panel request
 
     let query: any = {};
     
@@ -48,15 +49,16 @@ export async function GET(request: NextRequest) {
     
     let bookings;
     
-    if (user.role === 'admin') {
+    // If admin=true parameter and user is admin, show all bookings
+    // Otherwise, show only user's own bookings (even for admin users on My Bookings page)
+    if (adminView === 'true' && user.role === 'admin') {
       bookings = await Booking.find(query)
         .populate('property')
         .populate('user', 'firstName lastName email')
         .sort({ createdAt: -1 });
     } else {
-      // For regular users, add user filter
-      query.user = user._id;
-      bookings = await Booking.find(query)
+      // For My Bookings page, always show only user's own bookings
+      bookings = await Booking.find({ ...query, user: user._id })
         .populate('property')
         .sort({ createdAt: -1 });
     }

@@ -16,7 +16,7 @@ const Navbar = () => {
       
       const token = localStorage.getItem('token');
       const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-      const apiUrl = API_URL ? `${API_URL}/api/bookings?status=completed` : '/api/bookings?status=completed';
+      const apiUrl = API_URL ? `${API_URL}/api/bookings?status=completed&admin=true` : '/api/bookings?status=completed&admin=true';
       
       const response = await fetch(apiUrl, {
         headers: {

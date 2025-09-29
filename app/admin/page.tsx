@@ -48,7 +48,7 @@ const AdminPage = () => {
     queryKey: ['admin-bookings'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const apiUrl = API_URL ? `${API_URL}/api/bookings` : `/api/bookings`;
+      const apiUrl = API_URL ? `${API_URL}/api/bookings?admin=true` : `/api/bookings?admin=true`;
       const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
