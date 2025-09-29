@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 
 interface Filters {
   location: string;
@@ -27,11 +27,15 @@ const PropertyFilters = ({ onFiltersChange, initialFilters, properties = [] }: P
 
   // Track if this is the initial render to avoid calling parent with empty filters
   const [isInitialRender, setIsInitialRender] = useState(true);
+  
+  // Track previous initialFilters to prevent unnecessary updates
+  const prevInitialFiltersRef = useRef<Filters | undefined>(initialFilters);
 
-  // Sync with parent's initial filters
+  // Sync with parent's initial filters (only when they actually change)
   useEffect(() => {
-    if (initialFilters) {
+    if (initialFilters && initialFilters !== prevInitialFiltersRef.current) {
       setFilters(initialFilters);
+      prevInitialFiltersRef.current = initialFilters;
     }
   }, [initialFilters]);
 
