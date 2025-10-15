@@ -1,46 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
+import { verifyJWT } from '@/lib/auth';
 
-async function connectDB() {
-  if (mongoose.connections[0].readyState) return;
-  await mongoose.connect(process.env.MONGODB_URI!);
-}
-
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await dbConnect();
     
-    const { email, password } = await request.json();
-
-    // Your existing validation
-    if (!email || !password) {
-      return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
+    // Get token from Authorization header or cookies
+    const authHeader = request.headers.get('authorization');
+    let token = authHeader?.replace('Bearer ', '');
+    
+    // Fallback to cookie if no Authorization header
+    if (!token) {
+      token = request.cookies.get('auth-token')?.value;
+    }
+    
+    console.log('Auth check - Token present:', !!token, 'Source:', authHeader ? 'header' : 'cookie');
+    
+    if (!token) {
+      return NextResponse.json({ message: 'No token provided' }, { status: 401 });
     }
 
-    // Your existing login logic
-    const { default: User } = await import('@/models/User');
-    const user = await User.findOne({ email });
+    // Verify token
+    console.log('Verifying token...');
+    const payload = verifyJWT(token);
+    console.log('Token verified for user:', payload.userId);
+    
+    // Get user from database
+    const user = await User.findById(payload.userId).select('-password');
+    
     if (!user) {
-      return NextResponse.json({ message: 'Invalid email or password' }, { status: 400 });
+      console.log('User not found in database:', payload.userId);
+      return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return NextResponse.json({ message: 'Invalid email or password' }, { status: 400 });
-    }
-
-    // Your existing JWT generation
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
-    );
+    console.log('User authenticated:', user.email);
 
     return NextResponse.json({
-      message: 'Login successful',
-      token,
       user: {
         id: user._id,
         email: user.email,
@@ -51,7 +48,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    console.error('Auth verification error:', error);
+    return NextResponse.json({ message: 'Invalid token' }, { status: 401 });
   }
 }

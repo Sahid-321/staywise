@@ -1,55 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-
-async function connectDB() {
-  if (mongoose.connections[0].readyState) return;
-  await mongoose.connect(process.env.MONGODB_URI!);
-}
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
+import { signJWT } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await dbConnect();
     
     const { email, password } = await request.json();
 
-    // Your existing validation
+    console.log('Login attempt for:', email);
+
     if (!email || !password) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
-    // Your existing login logic
-    const { default: User } = await import('@/models/User');
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
     
     if (!user) {
+      console.log('User not found:', email);
       return NextResponse.json({ message: 'Invalid email or password' }, { status: 400 });
     }
 
+    console.log('User found, comparing password...');
     const isMatch = await user.comparePassword(password);
+    console.log('Password match result:', isMatch);
     
     if (!isMatch) {
       return NextResponse.json({ message: 'Invalid email or password' }, { status: 400 });
     }
 
-    // Your existing JWT generation
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
-    );
+    // Generate JWT token
+    const token = signJWT({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    });
 
+    const userResponse = {
+      id: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role
+    };
+
+    console.log('Login successful for user:', userResponse.email);
+
+    // Return token in response body instead of cookie
     return NextResponse.json({
       message: 'Login successful',
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role
-      }
+      user: userResponse,
+      token: token
     });
 
   } catch (error) {

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../providers/ClientProviders';
+import { useRouter } from 'next/navigation';
+import { formatLocation } from '@/lib/utils';
+import { toast } from 'react-toastify';
 
 interface Booking {
   _id: string;
@@ -12,267 +12,376 @@ interface Booking {
     _id: string;
     title: string;
     location: string;
-    images: string[];
     price: number;
+    images: string[];
   };
   checkIn: string;
   checkOut: string;
-  guests: number;
   totalPrice: number;
+  guests: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   specialRequests?: string;
   createdAt: string;
 }
 
-const MyBookingsPage = () => {
-  const { user, loading: authLoading } = useAuth();
+export default function MyBookingsPage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!loading && !user) {
       router.push('/login');
+      return;
     }
-  }, [user, authLoading, router]);
+    if (user) {
+      fetchMyBookings();
+    }
+  }, [user, loading, router]);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
-  const { data: bookingsData, isLoading, error } = useQuery({
-    queryKey: ['my-bookings'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const apiUrl = API_URL ? `${API_URL}/api/bookings` : '/api/bookings';
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+  const fetchMyBookings = async () => {
+    try {
+      setLoadingBookings(true);
       
+      const token = localStorage.getItem('auth-token');
+      
+      if (!token) {
+        setBookings([]);
+        setLoadingBookings(false);
+        return;
+      }
+
+      const response = await fetch('/api/bookings', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
       if (!response.ok) {
         throw new Error('Failed to fetch bookings');
       }
-      
+
       const data = await response.json();
-      return data.bookings || []; // Extract bookings array from response
-    },
-    enabled: !!user,
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchOnMount: true, // Always refetch when component mounts
-    staleTime: 0, // Consider data immediately stale
-  });
+      setBookings(data.bookings || []);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      setBookings([]);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
 
-  const bookings = bookingsData || [];
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to cancel this booking?')) {
+      return;
+    }
 
-  const cancelBookingMutation = useMutation({
-    mutationFn: async (bookingId: string) => {
-      const token = localStorage.getItem('token');
-      const apiUrl = API_URL ? `${API_URL}/api/bookings/${bookingId}` : `/api/bookings/${bookingId}`;
-      const response = await fetch(apiUrl, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: 'cancelled' })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to cancel booking');
+    try {
+      const token = localStorage.getItem('auth-token');
+      
+      if (!token) {
+        toast.error('Please login to cancel booking');
+        return;
       }
 
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
-    }
-  });
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: 'cancelled' }),
+      });
 
-  const handleCancelBooking = (bookingId: string) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      cancelBookingMutation.mutate(bookingId);
+      if (response.ok) {
+        setBookings(bookings.map(booking => 
+          booking._id === bookingId 
+            ? { ...booking, status: 'cancelled' as const }
+            : booking
+        ));
+        toast.success('Booking cancelled successfully');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to cancel booking');
+      }
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      toast.error('Failed to cancel booking');
     }
+  };
+
+  const formatPrice = (price: number) => {
+    return `₹${price.toLocaleString()}/day`;
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return '✅';
+      case 'pending':
+        return '⏳';
+      case 'cancelled':
+        return '❌';
+      default:
+        return '📝';
+    }
   };
 
-  const calculateNights = (checkIn: string, checkOut: string) => {
-    const nights = Math.ceil(
-      (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return nights;
-  };
-
-  if (authLoading) {
+  if (loading || loadingBookings) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (!user) {
-    return null;
-  }
-
-  if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center text-red-600">
-          Error loading bookings. Please try again later.
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md">
+          <div className="flex items-center">
+            <div className="text-yellow-400 mr-3">🔒</div>
+            <div>
+              <h3 className="text-yellow-800 font-semibold">Login Required</h3>
+              <p className="text-yellow-600">Please login to view your bookings.</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">My Bookings</h1>
-      
-      {!bookings || bookings.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-600 text-lg mb-4">
-            You haven't made any bookings yet.
-          </div>
-          <a
-            href="/"
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Browse Properties
-          </a>
+    <div className="min-h-screen bg-gray-50 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+            <span className="mr-3">📋</span>
+            My Bookings
+          </h1>
+          <p className="text-gray-600 mt-2">Manage your property bookings and reservations</p>
         </div>
-      ) : (
-        <div className="space-y-6">
-          {bookings.map((booking: Booking) => (
-            <div key={booking._id} className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="md:flex">
-                <div className="md:w-1/3">
-                  <div className="relative h-48 md:h-full">
-                    {booking.property.images && booking.property.images.length > 0 ? (
-                      <Image
-                        src={booking.property.images[0]}
-                        alt={booking.property.title}
-                        fill
-                        className="object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = 'https://via.placeholder.com/300x200/e5e7eb/9ca3af?text=No+Image';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-400">No Image</span>
+
+        {/* User Info */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">👤 Account Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="font-medium text-gray-700">Name:</span> {user.email.split('@')[0] || 'N/A'}
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Email:</span> {user.email}
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Role:</span> 
+              <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+              }`}>
+                {user.role}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bookings Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Bookings</p>
+                <p className="text-2xl font-bold text-blue-600">{bookings.length}</p>
+              </div>
+              <div className="text-blue-500 text-3xl">📊</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Confirmed</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {bookings.filter(b => b.status === 'confirmed').length}
+                </p>
+              </div>
+              <div className="text-green-500 text-3xl">✅</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {bookings.filter(b => b.status === 'pending').length}
+                </p>
+              </div>
+              <div className="text-yellow-500 text-3xl">⏳</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Spent</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  ₹{bookings.reduce((sum, b) => sum + b.totalPrice, 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="text-purple-500 text-3xl">💰</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bookings List */}
+        {bookings.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-12 text-center">
+            <div className="text-6xl mb-4">🏠</div>
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">No bookings yet</h3>
+            <p className="text-gray-500 mb-6">Start browsing properties to make your first booking.</p>
+            <a
+              href="/properties"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Browse Properties
+            </a>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {bookings.map((booking) => (
+              <div key={booking._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex-1">
+                      {/* Booking Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mr-3">
+                            Booking #{booking._id.slice(-6)}
+                          </h3>
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(booking.status)}`}>
+                            {getStatusIcon(booking.status)} {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Booked on {new Date(booking.createdAt).toLocaleDateString()}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="md:w-2/3 p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        {booking.property.title}
-                      </h3>
-                      <p className="text-gray-600 flex items-center">
-                        📍 {booking.property.location}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(booking.status)}`}>
-                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <div className="text-sm text-gray-600 mb-1">Check-in</div>
-                      <div className="font-semibold">{formatDate(booking.checkIn)}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600 mb-1">Check-out</div>
-                      <div className="font-semibold">{formatDate(booking.checkOut)}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600 mb-1">Guests</div>
-                      <div className="font-semibold">{booking.guests} guest{booking.guests !== 1 ? 's' : ''}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600 mb-1">Duration</div>
-                      <div className="font-semibold">
-                        {calculateNights(booking.checkIn, booking.checkOut)} night{calculateNights(booking.checkIn, booking.checkOut) !== 1 ? 's' : ''}
+
+                      {/* Property Details */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <h4 className="font-semibold text-gray-800 mb-2">🏠 Property Details</h4>
+                          <div className="space-y-2 text-sm">
+                            <p className="font-medium text-gray-900">{booking.property.title}</p>
+                            <p className="text-gray-600">📍 {formatLocation(booking.property.location)}</p>
+                            <p className="text-gray-600">
+                              💰 {formatPrice(booking.property.price)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="font-semibold text-gray-800 mb-2">📅 Booking Details</h4>
+                          <div className="space-y-2 text-sm">
+                            <p>
+                              <span className="font-medium text-gray-700">Check-in:</span> {' '}
+                              {new Date(booking.checkIn).toLocaleDateString()}
+                            </p>
+                            <p>
+                              <span className="font-medium text-gray-700">Check-out:</span> {' '}
+                              {new Date(booking.checkOut).toLocaleDateString()}
+                            </p>
+                            <p>
+                              <span className="font-medium text-gray-700">Duration:</span> {' '}
+                              {Math.ceil((new Date(booking.checkOut).getTime() - new Date(booking.checkIn).getTime()) / (1000 * 60 * 60 * 24))} days
+                            </p>
+                            <p>
+                              <span className="font-medium text-gray-700">Guests:</span> {' '}
+                              {booking.guests}
+                            </p>
+                            <p className="text-lg font-bold text-green-600">
+                              Total Amount: ₹{booking.totalPrice.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <div className="text-lg font-bold text-green-600">
-                      Total: ${booking.totalPrice}
-                    </div>
-                    
-                    <div className="flex space-x-3">
-                      <a
-                        href={`/property/${booking.property._id}`}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                      >
-                        View Property
-                      </a>
-                      
-                      {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                        <button
-                          onClick={() => handleCancelBooking(booking._id)}
-                          disabled={cancelBookingMutation.isPending}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
-                        >
-                          {cancelBookingMutation.isPending ? 'Cancelling...' : 'Cancel Booking'}
-                        </button>
+
+                    {/* Property Image */}
+                    <div className="mt-4 lg:mt-0 lg:ml-6">
+                      {booking.property.images && booking.property.images.length > 0 ? (
+                        <div className="w-full lg:w-32 h-24 rounded-lg overflow-hidden">
+                          <img
+                            src={booking.property.images[0]}
+                            alt={booking.property.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full lg:w-32 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-400 text-sm">📷</span>
+                        </div>
                       )}
                     </div>
                   </div>
-                  
-                  {booking.specialRequests && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                      <div className="text-sm text-gray-600 mb-1">Special Requests</div>
-                      <div className="text-sm">{booking.specialRequests}</div>
-                    </div>
-                  )}
-                  
-                  <div className="mt-4 text-xs text-gray-500">
-                    Booked on {formatDate(booking.createdAt)}
+
+                  {/* Action Buttons */}
+                  <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-3">
+                    <a
+                      href={`/properties/${booking.property._id}`}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      View Property
+                    </a>
+                    
+                    {booking.status === 'pending' && (
+                      <button
+                        onClick={() => handleCancelBooking(booking._id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+                      >
+                        Cancel Booking
+                      </button>
+                    )}
+                    
+                    {booking.status === 'confirmed' && (
+                      <div className="flex gap-2">
+                        <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium">
+                          Download Receipt
+                        </button>
+                        <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium">
+                          Contact Owner
+                        </button>
+                      </div>
+                    )}
+
+                    {booking.status === 'cancelled' && (
+                      <span className="px-4 py-2 bg-gray-100 text-gray-600 rounded-md text-sm font-medium">
+                        Booking Cancelled
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
-};
-
-export default MyBookingsPage;
+}

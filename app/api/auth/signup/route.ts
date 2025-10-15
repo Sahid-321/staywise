@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-
-async function connectDB() {
-  if (mongoose.connections[0].readyState) return;
-  await mongoose.connect(process.env.MONGODB_URI!);
-}
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
+import { signJWT } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await dbConnect();
     
     const { firstName, lastName, email, password } = await request.json();
+
+    console.log('Signup attempt for:', email);
 
     // Basic validation
     if (!firstName || !lastName || !email || !password) {
@@ -27,48 +24,51 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-
-
     // Check if user already exists
-    const { default: User } = await import('@/models/User');
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
+      console.log('User already exists:', email);
       return NextResponse.json({ 
         message: 'User already exists with this email' 
       }, { status: 400 });
     }
 
+    console.log('Creating new user...');
     // Create new user (password will be automatically hashed by User model pre-save hook)
     const user = new User({
       firstName,
       lastName,
-      email,
-      password, // Don't hash here - let the User model handle it
+      email: email.toLowerCase(),
+      password,
       role: 'user'
     });
 
     await user.save();
+    console.log('User created successfully');
 
     // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, email: user.email }, 
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
-    );
+    const token = signJWT({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    });
 
     // Return user data without password
     const userResponse = {
-      _id: user._id,
+      id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
       role: user.role
     };
 
+    console.log('Signup complete');
+
+    // Return token in response body instead of cookie
     return NextResponse.json({ 
       message: 'User created successfully', 
-      token, 
-      user: userResponse 
+      user: userResponse,
+      token: token
     }, { status: 201 });
 
   } catch (error) {

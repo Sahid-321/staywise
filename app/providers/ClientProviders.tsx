@@ -57,64 +57,38 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth-token');
+      
       if (!token) {
+        setUser(null);
         setLoading(false);
         return;
       }
 
-      // First, check if token is expired
-      const decoded = decodeJWTToken(token);
-      if (decoded && decoded.exp && Date.now() >= decoded.exp * 1000) {
-        localStorage.removeItem('token');
-        setLoading(false);
-        return;
-      }
-
-      const apiUrl = API_URL ? `${API_URL}/api/auth/me` : '/api/auth/me';
-      const response = await fetch(apiUrl, {
+      const response = await fetch('/api/auth/me', {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
-      } else if (response.status === 405) {
-        // Method not allowed - route might not be compiled yet
-        // Fallback: use cached user data if available
-        const userData = localStorage.getItem('userData');
-        if (userData) {
-          console.log('Using fallback auth from cached user data');
-          setUser(JSON.parse(userData));
-        } else if (decoded && decoded.id) {
-          console.log('Using fallback auth from token');
-          // Create basic user object from token as last resort
-          setUser({
-            id: decoded.id,
-            email: decoded.email || '',
-            firstName: '',
-            lastName: '',
-            role: 'user' // default role
-          });
-        }
       } else {
-        console.log('Auth check failed with status:', response.status);
-        localStorage.removeItem('token');
+        localStorage.removeItem('auth-token');
+        setUser(null);
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      // Don't remove token on network errors, might be temporary
-      console.log('Network error during auth check, keeping token');
+      localStorage.removeItem('auth-token');
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
   const login = async (email: string, password: string) => {
-    const apiUrl = API_URL ? `${API_URL}/api/auth/login` : '/api/auth/login';
-    const response = await fetch(apiUrl, {
+    const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -128,14 +102,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       throw new Error(data.message || 'Login failed');
     }
 
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('userData', JSON.stringify(data.user));
+    // Store token in localStorage
+    localStorage.setItem('auth-token', data.token);
     setUser(data.user);
   };
 
   const signup = async (email: string, password: string, firstName: string, lastName: string) => {
-    const apiUrl = API_URL ? `${API_URL}/api/auth/signup` : '/api/auth/signup';
-    const response = await fetch(apiUrl, {
+    const response = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -149,15 +122,30 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       throw new Error(data.message || 'Signup failed');
     }
 
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('userData', JSON.stringify(data.user));
+    // Store token in localStorage
+    localStorage.setItem('auth-token', data.token);
     setUser(data.user);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userData');
-    setUser(null);
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      }
+      
+      localStorage.removeItem('auth-token');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+    }
   };
 
   return (

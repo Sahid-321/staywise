@@ -1,69 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
-
-async function connectDB() {
-  if (mongoose.connections[0].readyState) return;
-  await mongoose.connect(process.env.MONGODB_URI!);
-}
-
-// JWT verification function
-function verifyToken(token: string) {
-  return jwt.verify(token, process.env.JWT_SECRET!);
-}
+import dbConnect from '@/lib/mongodb';
+import Booking from '@/models/Booking';
+import Property from '@/models/Property';
+import User from '@/models/User';
+import { verifyJWT, getTokenFromRequest } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await dbConnect();
+
+    const token = getTokenFromRequest(request);
     
-    const authorization = request.headers.get('authorization');
-    
-    if (!authorization) {
-      return NextResponse.json({ message: 'Access denied. No token provided.' }, { status: 401 });
+    if (!token) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authorization.startsWith('Bearer ') 
-      ? authorization.slice(7) 
-      : authorization;
+    // Verify token and get user
+    const payload = verifyJWT(token);
+    const user = await User.findById(payload.userId);
 
-    const decoded = verifyToken(token) as any;
-    
-    const { default: User } = await import('@/models/User');
-    const { default: Booking } = await import('@/models/Booking');
-    const user = await User.findById(decoded.id);
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
-    // Get query parameters
-    const { searchParams } = new URL(request.url);
-    const statusFilter = searchParams.get('status');
-    const adminView = searchParams.get('admin'); // Check if this is admin panel request
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
+    const status = url.searchParams.get('status');
+    const adminView = url.searchParams.get('admin');
 
-    let query: any = {};
+    // Build filter based on user role
+    let filter: any = {};
     
-    // Add status filter if provided
-    if (statusFilter) {
-      query.status = statusFilter;
-    }
-    
-    let bookings;
-    
-    // If admin=true parameter and user is admin, show all bookings
-    // Otherwise, show only user's own bookings (even for admin users on My Bookings page)
     if (adminView === 'true' && user.role === 'admin') {
-      bookings = await Booking.find(query)
-        .populate('property')
-        .populate('user', 'firstName lastName email')
-        .sort({ createdAt: -1 });
+      // Admin can see all bookings
+      if (status) {
+        filter.status = status;
+      }
     } else {
-      // For My Bookings page, always show only user's own bookings
-      bookings = await Booking.find({ ...query, user: user._id })
-        .populate('property')
-        .sort({ createdAt: -1 });
+      // Regular users can only see their own bookings
+      filter.user = user._id;
+      if (status) {
+        filter.status = status;
+      }
     }
-    
-    return NextResponse.json({ bookings });
+
+    const bookings = await Booking.find(filter)
+      .populate('user', 'firstName lastName email')
+      .populate('property', 'title images location price')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Booking.countDocuments(filter);
+
+    return NextResponse.json({
+      bookings,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
 
   } catch (error) {
     console.error('Bookings fetch error:', error);
@@ -73,96 +73,92 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await dbConnect();
+
+    const token = getTokenFromRequest(request);
     
-    const authorization = request.headers.get('authorization');
-    
-    if (!authorization) {
-      return NextResponse.json({ message: 'Access denied. No token provided.' }, { status: 401 });
+    if (!token) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authorization.startsWith('Bearer ') 
-      ? authorization.slice(7) 
-      : authorization;
+    // Verify token and get user
+    const payload = verifyJWT(token);
+    const user = await User.findById(payload.userId);
 
-    const decoded = verifyToken(token) as any;
-    
-    const { default: User } = await import('@/models/User');
-    const { default: Property } = await import('@/models/Property');
-    const { default: Booking } = await import('@/models/Booking');
-    const user = await User.findById(decoded.id);
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
     const { propertyId, checkIn, checkOut, guests, specialRequests } = await request.json();
 
-    // Validation
-    if (!propertyId || !checkIn || !checkOut || !guests) {
-      return NextResponse.json({ 
-        message: 'Property ID, check-in, check-out dates, and number of guests are required' 
-      }, { status: 400 });
-    }
-
+    // Validate property exists
     const property = await Property.findById(propertyId);
     if (!property) {
       return NextResponse.json({ message: 'Property not found' }, { status: 404 });
     }
 
-    if (!property.isAvailable) {
-      return NextResponse.json({ message: 'Property is not available' }, { status: 400 });
-    }
-
-    if (guests > property.maxGuests) {
-      return NextResponse.json({ 
-        message: `Property can accommodate maximum ${property.maxGuests} guests` 
-      }, { status: 400 });
-    }
-
+    // Validate dates
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    if (checkInDate >= checkOutDate) {
+    if (checkInDate < today) {
+      return NextResponse.json({ message: 'Check-in date cannot be in the past' }, { status: 400 });
+    }
+
+    if (checkOutDate <= checkInDate) {
       return NextResponse.json({ message: 'Check-out date must be after check-in date' }, { status: 400 });
     }
 
-    // Check for existing bookings (simplified - you might want more complex date overlap logic)
-    const existingBooking = await Booking.findOne({
+    // Check for overlapping bookings
+    const overlappingBooking = await Booking.findOne({
       property: propertyId,
-      status: { $in: ['pending', 'confirmed'] },
+      status: { $in: ['confirmed', 'pending'] },
       $or: [
-        { checkIn: { $lte: checkOutDate }, checkOut: { $gte: checkInDate } }
+        {
+          checkIn: { $lte: checkInDate },
+          checkOut: { $gt: checkInDate }
+        },
+        {
+          checkIn: { $lt: checkOutDate },
+          checkOut: { $gte: checkOutDate }
+        },
+        {
+          checkIn: { $gte: checkInDate },
+          checkOut: { $lte: checkOutDate }
+        }
       ]
     });
 
-    if (existingBooking) {
-      return NextResponse.json({ message: 'Property is not available for selected dates' }, { status: 400 });
+    if (overlappingBooking) {
+      return NextResponse.json({ message: 'Property is not available for selected dates' }, { status: 409 });
     }
 
     // Calculate total price
     const days = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
-    const totalPrice = days * property.price;
+    const totalPrice = property.price * days;
 
+    // Create booking
     const booking = new Booking({
       user: user._id,
       property: propertyId,
       checkIn: checkInDate,
       checkOut: checkOutDate,
-      guests: Number(guests),
+      guests,
       totalPrice,
-      status: 'pending',
-      specialRequests: specialRequests || undefined
+      specialRequests,
     });
 
     await booking.save();
-    
+
     const populatedBooking = await Booking.findById(booking._id)
-      .populate('property')
-      .populate('user', 'firstName lastName email');
-    
-    return NextResponse.json({ 
-      message: 'Booking created successfully', 
-      booking: populatedBooking 
+      .populate('user', 'firstName lastName email')
+      .populate('property', 'title images location price');
+
+    return NextResponse.json({
+      message: 'Booking created successfully',
+      booking: populatedBooking,
     }, { status: 201 });
 
   } catch (error) {

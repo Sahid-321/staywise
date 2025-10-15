@@ -3,6 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { MapPin, Bed, Bath, Square } from 'lucide-react';
+import { formatLocation } from '@/lib/utils';
 
 interface Property {
   _id: string;
@@ -77,7 +79,7 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           
           <div className="mt-auto">
             <div className="flex items-center text-sm text-gray-500 mb-3">
-              <span className="truncate">📍 {property.location}</span>
+              <span className="truncate">📍 {formatLocation(property.location)}</span>
             </div>
             
             <div className="flex items-center justify-between text-sm text-gray-600 mb-3">

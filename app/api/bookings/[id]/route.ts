@@ -1,40 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
-
-async function connectDB() {
-  if (mongoose.connections[0].readyState) return;
-  await mongoose.connect(process.env.MONGODB_URI!);
-}
-
-// JWT verification function
-function verifyToken(token: string) {
-  return jwt.verify(token, process.env.JWT_SECRET!);
-}
+import dbConnect from '@/lib/mongodb';
+import Booking from '@/models/Booking';
+import User from '@/models/User';
+import { verifyJWT, getTokenFromRequest } from '@/lib/auth';
 
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    await dbConnect();
     const params = await context.params;
+
+    const token = getTokenFromRequest(request);
     
-    const authorization = request.headers.get('authorization');
-    
-    if (!authorization) {
-      return NextResponse.json({ message: 'Access denied. No token provided.' }, { status: 401 });
+    if (!token) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authorization.startsWith('Bearer ') 
-      ? authorization.slice(7) 
-      : authorization;
+    // Verify token and get user
+    const payload = verifyJWT(token);
+    const user = await User.findById(payload.userId);
 
-    const decoded = verifyToken(token) as any;
-    
-    const { default: User } = await import('@/models/User');
-    const { default: Booking } = await import('@/models/Booking');
-    const user = await User.findById(decoded.id);
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
@@ -87,6 +74,164 @@ export async function PATCH(
 
   } catch (error) {
     console.error('Booking status update error:', error);
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    await dbConnect();
+    const params = await context.params;
+
+    const token = getTokenFromRequest(request);
+    
+    if (!token) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify token and get user
+    const payload = verifyJWT(token);
+    const user = await User.findById(payload.userId);
+
+    if (!user) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    }
+
+    const booking = await Booking.findById(params.id)
+      .populate('user', 'firstName lastName email')
+      .populate('property', 'title images location price');
+
+    if (!booking) {
+      return NextResponse.json({ message: 'Booking not found' }, { status: 404 });
+    }
+
+    // Check if user can access this booking
+    if (booking.user._id.toString() !== user._id.toString() && user.role !== 'admin') {
+      return NextResponse.json({ message: 'Access denied' }, { status: 403 });
+    }
+
+    return NextResponse.json({ booking });
+
+  } catch (error) {
+    console.error('Booking fetch error:', error);
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    await dbConnect();
+    const params = await context.params;
+
+    const token = getTokenFromRequest(request);
+    
+    if (!token) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify token and get user
+    const payload = verifyJWT(token);
+    const user = await User.findById(payload.userId);
+
+    if (!user) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    }
+
+    const booking = await Booking.findById(params.id);
+
+    if (!booking) {
+      return NextResponse.json({ message: 'Booking not found' }, { status: 404 });
+    }
+
+    // Check if user can modify this booking
+    if (booking.user.toString() !== user._id.toString() && user.role !== 'admin') {
+      return NextResponse.json({ message: 'Access denied' }, { status: 403 });
+    }
+
+    const updateData = await request.json();
+
+    // Prevent users from changing certain fields directly
+    if (user.role !== 'admin') {
+      delete updateData.totalPrice;
+      delete updateData.user;
+      delete updateData.property;
+    }
+
+    // Update booking
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('user', 'firstName lastName email')
+     .populate('property', 'title images location price');
+
+    return NextResponse.json({
+      message: 'Booking updated successfully',
+      booking: updatedBooking,
+    });
+
+  } catch (error) {
+    console.error('Booking update error:', error);
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    await dbConnect();
+    const params = await context.params;
+
+    const token = getTokenFromRequest(request);
+    
+    if (!token) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify token and get user
+    const payload = verifyJWT(token);
+    const user = await User.findById(payload.userId);
+
+    if (!user) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    }
+
+    const booking = await Booking.findById(params.id);
+
+    if (!booking) {
+      return NextResponse.json({ message: 'Booking not found' }, { status: 404 });
+    }
+
+    // Check if user can delete this booking
+    if (booking.user.toString() !== user._id.toString() && user.role !== 'admin') {
+      return NextResponse.json({ message: 'Access denied' }, { status: 403 });
+    }
+
+    // Check if booking can be cancelled
+    const now = new Date();
+    const checkInDate = new Date(booking.checkIn);
+    const hoursDifference = (checkInDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursDifference < 24 && booking.status === 'confirmed') {
+      return NextResponse.json({ 
+        message: 'Cannot cancel booking less than 24 hours before check-in' 
+      }, { status: 400 });
+    }
+
+    await Booking.findByIdAndDelete(params.id);
+
+    return NextResponse.json({ message: 'Booking cancelled successfully' });
+
+  } catch (error) {
+    console.error('Booking deletion error:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }
