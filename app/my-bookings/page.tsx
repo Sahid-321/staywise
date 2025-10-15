@@ -240,7 +240,7 @@ export default function MyBookingsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Spent</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  ₹{bookings.reduce((sum, b) => sum + b.totalPrice, 0).toLocaleString()}
+                  ₹{bookings.filter(b => b.status === 'confirmed').reduce((sum, b) => sum + b.totalPrice, 0).toLocaleString()}
                 </p>
               </div>
               <div className="text-purple-500 text-3xl">💰</div>
