@@ -22,7 +22,7 @@ StayWise allows users to:
 
 1. **Install dependencies**
    ```bash
-   npm install
+   yarn install
    ```
 
 2. **Set up environment** - Create `.env.local` file with:
