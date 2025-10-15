@@ -263,7 +263,25 @@ export default function MyBookingsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {bookings.map((booking) => (
+            {bookings.map((booking) => {
+              // Skip bookings with deleted properties
+              if (!booking.property) {
+                return (
+                  <div key={booking._id} className="bg-red-50 border border-red-200 rounded-lg p-6">
+                    <div className="flex items-center">
+                      <div className="text-red-400 mr-3 text-2xl">⚠️</div>
+                      <div>
+                        <h3 className="text-red-800 font-semibold">Property No Longer Available</h3>
+                        <p className="text-red-600 text-sm">
+                          Booking #{booking._id.slice(-6)} - The property associated with this booking has been removed.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
               <div key={booking._id} className="bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
@@ -288,10 +306,10 @@ export default function MyBookingsPage() {
                         <div>
                           <h4 className="font-semibold text-gray-800 mb-2">🏠 Property Details</h4>
                           <div className="space-y-2 text-sm">
-                            <p className="font-medium text-gray-900">{booking.property.title}</p>
-                            <p className="text-gray-600">📍 {formatLocation(booking.property.location)}</p>
+                            <p className="font-medium text-gray-900">{booking.property?.title || 'N/A'}</p>
+                            <p className="text-gray-600">📍 {booking.property?.location ? formatLocation(booking.property.location) : 'N/A'}</p>
                             <p className="text-gray-600">
-                              💰 {formatPrice(booking.property.price)}
+                              💰 {booking.property?.price ? formatPrice(booking.property.price) : 'N/A'}
                             </p>
                           </div>
                         </div>
@@ -325,11 +343,11 @@ export default function MyBookingsPage() {
 
                     {/* Property Image */}
                     <div className="mt-4 lg:mt-0 lg:ml-6">
-                      {booking.property.images && booking.property.images.length > 0 ? (
+                      {booking.property?.images && booking.property.images.length > 0 ? (
                         <div className="w-full lg:w-32 h-24 rounded-lg overflow-hidden">
                           <img
                             src={booking.property.images[0]}
-                            alt={booking.property.title}
+                            alt={booking.property?.title || 'Property'}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -343,12 +361,14 @@ export default function MyBookingsPage() {
 
                   {/* Action Buttons */}
                   <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-3">
-                    <a
-                      href={`/properties/${booking.property._id}`}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-                    >
-                      View Property
-                    </a>
+                    {booking.property?._id && (
+                      <a
+                        href={`/properties/${booking.property._id}`}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                      >
+                        View Property
+                      </a>
+                    )}
                     
                     {booking.status === 'pending' && (
                       <button
@@ -378,7 +398,8 @@ export default function MyBookingsPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

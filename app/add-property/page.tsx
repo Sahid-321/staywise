@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../providers/ClientProviders';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
+import SmartImagePicker from '../components/SmartImagePicker';
 
 export default function AddPropertyPage() {
   const { user, loading } = useAuth();
@@ -25,6 +26,7 @@ export default function AddPropertyPage() {
     floor: '',
     totalFloors: '',
     features: [] as string[],
+    images: [] as string[],
     ownerName: '',
     ownerPhone: '',
     ownerEmail: '',
@@ -82,6 +84,11 @@ export default function AddPropertyPage() {
       return;
     }
 
+    if (!formData.images || formData.images.length === 0) {
+      toast.error('Please select at least one image for your property');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -108,6 +115,7 @@ export default function AddPropertyPage() {
         floor: formData.floor ? parseInt(formData.floor) : 0,
         totalFloors: formData.totalFloors ? parseInt(formData.totalFloors) : 1,
         amenities: formData.features,
+        images: formData.images,
         ownerName: formData.ownerName,
         ownerPhone: formData.ownerPhone,
       };
@@ -410,6 +418,21 @@ export default function AddPropertyPage() {
                   required
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Property Images */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">📸 Property Images</h2>
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+              <SmartImagePicker
+                propertyTitle={formData.title}
+                propertyType={formData.type}
+                category={formData.category}
+                location={formData.location}
+                selectedImages={formData.images}
+                onImagesSelected={(images) => setFormData(prev => ({ ...prev, images }))}
+              />
             </div>
           </div>
 

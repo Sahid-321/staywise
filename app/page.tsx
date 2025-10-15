@@ -206,31 +206,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header Section with Tabs */}
       <div className="bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4">
-          {/* Property Type Tabs */}
-          <div className="flex gap-1 pt-4">
-            <button
-              onClick={() => setSelectedType('all')}
-              className={`pb-3 px-6 font-medium transition-all relative ${
-                selectedType === 'all'
-                  ? 'text-red-600 border-b-3 border-red-600 bg-red-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              All Properties
-            </button>
-            <button
-              onClick={() => setSelectedType('rent')}
-              className={`pb-3 px-6 font-medium transition-all relative ${
-                selectedType === 'rent'
-                  ? 'text-red-600 border-b-3 border-red-600 bg-red-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              For Rent
-            </button>
-          </div>
-        </div>
+       
       </div>
 
       {/* Search Section */}

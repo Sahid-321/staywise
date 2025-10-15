@@ -107,12 +107,12 @@ const Navbar = () => {
                 </div>
               ) : (
                 <div className="flex space-x-2">
-                  <Link
+                  {/* <Link
                     href="/admin"
                     className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium border border-purple-300 hover:border-purple-600 transition-colors"
                   >
                     Admin Panel
-                  </Link>
+                  </Link> */}
                   <Link
                     href="/login"
                     className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium border border-gray-300 hover:border-blue-600 transition-colors"

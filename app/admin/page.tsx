@@ -282,18 +282,24 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {bookings.map((booking) => (
+                    {bookings.map((booking) => {
+                      // Skip bookings with deleted properties or users
+                      if (!booking.property || !booking.user) {
+                        return null;
+                      }
+                      
+                      return (
                       <tr key={booking._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
-                            {booking.property.title}
+                            {booking.property?.title || 'Property Deleted'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {booking.user.firstName} {booking.user.lastName}
+                            {booking.user?.firstName || ''} {booking.user?.lastName || ''}
                           </div>
-                          <div className="text-sm text-gray-500">{booking.user.email}</div>
+                          <div className="text-sm text-gray-500">{booking.user?.email || 'N/A'}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(booking.checkInDate).toLocaleDateString()}
@@ -336,7 +342,8 @@ export default function AdminPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
