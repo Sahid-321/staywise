@@ -245,36 +245,18 @@ export default function PropertyDetailsPage() {
             {/* Property Images */}
             <div className="mb-8">
               {property.images && property.images.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Main Image */}
-                  <div className="h-64 md:h-80 rounded-lg overflow-hidden">
+                <div className="w-full">
+                  {/* Main Image Only */}
+                  <div className="h-96 rounded-lg overflow-hidden">
                     <img
                       src={property.images[0]}
                       alt={`${property.title} - Main`}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                     />
                   </div>
-                  {/* Thumbnail Grid */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {property.images.slice(1, 5).map((image, index) => (
-                      <div key={index} className="h-32 md:h-39 rounded-lg overflow-hidden">
-                        <img
-                          src={image}
-                          alt={`${property.title} - Image ${index + 2}`}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        />
-                      </div>
-                    ))}
-                    {/* Show placeholder for missing images */}
-                    {property.images.length < 5 && Array.from({ length: 5 - property.images.length }).map((_, index) => (
-                      <div key={`placeholder-${index}`} className="h-32 md:h-39 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-400 text-sm">No Image</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               ) : (
-                <div className="h-64 md:h-80 bg-gray-200 rounded-lg flex items-center justify-center">
+                <div className="h-96 bg-gray-200 rounded-lg flex items-center justify-center">
                   <span className="text-gray-400 text-xl">No images available</span>
                 </div>
               )}
